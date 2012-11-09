@@ -221,15 +221,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 logs_redis_urls() ->
-    URLs = case os:getenv("LOGPLEX_SHARD_URLS") of
-               false ->
-                   erlang:error({fatal_config_error,
-                                 missing_logplex_shard_urls});
+    URLs = case logplex_app:config(shard_urls, "") of
                [] ->
-                   case os:getenv("LOGPLEX_CONFIG_REDIS_URL") of
-                       false -> ["redis://127.0.0.1:6379/"];
-                       Url -> [Url]
-                   end;
+                   [logplex_app:config(config_redis_url)];
                UrlString when is_list(UrlString) ->
                    string:tokens(UrlString, ",")
            end,
@@ -263,16 +257,8 @@ add_buffer(Url) ->
     Buffer.
 
 redis_buffer_opts(Url) ->
-    MaxLength =
-        case os:getenv("LOGPLEX_REDIS_BUFFER_LENGTH") of
-            false -> ?DEFAULT_LOGPLEX_REDIS_BUFFER_LENGTH;
-            StrNum1 -> list_to_integer(StrNum1)
-        end,
-    NumWorkers =
-        case os:getenv("LOGPLEX_REDIS_WRITERS") of
-            false -> ?DEFAULT_LOGPLEX_REDIS_WRITERS;
-            StrNum2 -> list_to_integer(StrNum2)
-        end,
+    MaxLength = logplex_utils:to_int(logplex_app:config(redis_buffer_length)),
+    NumWorkers = logplex_utils:to_int(logplex_app:config(redis_writers)),
     RedisOpts = logplex_utils:parse_redis_url(Url),
     [{name, "logplex_redis_buffer"},
      {max_length, MaxLength},
